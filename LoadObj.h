@@ -13,7 +13,7 @@ using namespace std;
 #define dot(u,v)   ((u).x * (v).x + (u).y * (v).y + (u).z*(v).z)    
 #define norm2(v)   dot(v,v)        // norm2 = squared length of vector    
 #define norm(v)    sqrt(norm2(v))  // norm = length of vector    
-#define d(u,v)     norm(u-v)       // distance = norm of difference   
+#define dis(u,v)     norm(u-v)       // distance = norm of difference   
 #define max(a,b)    (((a) > (b)) ? (a) : (b))
 #define min(a,b)    (((a) < (b)) ? (a) : (b))
 
@@ -97,6 +97,7 @@ struct TriangleMesh
 	vector<TriangleFace> normals;
 	//模型的包围盒  
 	float3 bounding_box[2];
+	float3 bbox_centroid;
 	//模型的包围球参数  
 	float3 bounding_sphere_c;
 	float bounding_sphere_r;
@@ -110,6 +111,7 @@ int total_number_of_triangles = 0;
 float3 scene_aabbox_min;
 float3 scene_aabbox_max;
 
+void calculate_bbox(TriangleMesh &mesh);
 void loadObj(const std::string filename, TriangleMesh &mesh);
 
 void loadObj(const std::string filename, TriangleMesh &mesh)
@@ -163,6 +165,11 @@ void loadObj(const std::string filename, TriangleMesh &mesh)
 		}
 	}
 
+	calculate_bbox(mesh);
+}
+
+void calculate_bbox(TriangleMesh &mesh)
+{
 	float xmin, ymin, zmin, xmax, ymax, zmax;
 	int Pxmin, Pxmax, Pymin, Pymax, Pzmin, Pzmax;
 
@@ -217,6 +224,10 @@ void loadObj(const std::string filename, TriangleMesh &mesh)
 		}
 	}
 
+	mesh.bbox_centroid.x = (mesh.bounding_box[0].x + mesh.bounding_box[1].x) / 2.0;
+	mesh.bbox_centroid.y = (mesh.bounding_box[0].y + mesh.bounding_box[1].y) / 2.0;
+	mesh.bbox_centroid.z = (mesh.bounding_box[0].z + mesh.bounding_box[1].z) / 2.0;
+
 	//calculate the bounding sphere  
 	float3 dVx = mesh.verts[Pxmax] - mesh.verts[Pxmin];
 	float3 dVy = mesh.verts[Pymax] - mesh.verts[Pymin];
@@ -266,15 +277,84 @@ void loadObj(const std::string filename, TriangleMesh &mesh)
 	mesh.bounding_sphere_c = center;
 	mesh.bounding_sphere_r = radius;
 
-	cout << "----------obj file loaded-------------" << endl;
+	cout << "----------obj file loaded or updated-------------" << endl;
 	cout << "number of faces:" << mesh.faces.size() << " number of vertices:" << mesh.verts.size() << endl;
 	cout << "obj bounding box: min:("
 		<< mesh.bounding_box[0].x << "," << mesh.bounding_box[0].y << "," << mesh.bounding_box[0].z << ") max:("
 		<< mesh.bounding_box[1].x << "," << mesh.bounding_box[1].y << "," << mesh.bounding_box[1].z << ")" << endl
 		<< "obj bounding sphere center:" << mesh.bounding_sphere_c.x << "," << mesh.bounding_sphere_c.y << "," << mesh.bounding_sphere_c.z << endl
 		<< "obj bounding sphere radius:" << mesh.bounding_sphere_r << endl;
-
 }
 
+void rotate3(TriangleMesh &mesh, double x0, double y0, double z0, double ang);
+
+void rotate3(TriangleMesh &mesh, double x0, double y0, double z0, double ang)
+{
+
+	double x2 = x0*x0;
+	double y2 = y0*y0;
+	double z2 = z0*z0;
+
+	double d2 = x2 + y2 + z2;
+	double d = sqrt(d2);
+
+	double sina = sin(ang);
+	double cosa = cos(ang);
+
+	float3 q, ans;
+
+	for (int i = 0; i < mesh.verts.size(); i++)
+	{
+		q.x = mesh.verts[i].x;
+		q.y = mesh.verts[i].y;
+		q.z = mesh.verts[i].z;
+
+		if (x0 == 1 && y0 == 0 && z0 == 0 && ang == 90)
+		{
+			ans.x = q.x;
+			ans.y = -q.z;
+			ans.z = q.y;
+		}
+		else if (x0 == 0 && y0 == 0 && z0 == 1 && ang == 180)
+		{
+			ans.x = -q.x;
+			ans.y = -q.y;
+			ans.z = q.z;
+		}
+		else
+		{
+			ans.x = (x2 + (y2 + z2)*cosa) / d2*q.x
+				+ (x0*y0*(1 - cosa) / d2 - z0*sina / d)* q.y
+				+ (x0*z0*(1 - cosa) / d2 + y0*sina / d)*q.z;
+
+			ans.y = (y0*x0*(1 - cosa) / d2 + z0*sina / d)*q.x
+				+ (y2 + (x2 + z2)*cosa) / d2* q.y
+				+ (y0*z0*(1 - cosa) / d2 - x0*sina / d)*q.z;
+
+			ans.z = (z0*x0*(1 - cosa) / d2 - y0*sina / d)*q.x
+				+ (z0*y0*(1 - cosa) / d2 + x0*sina / d)*q.y
+				+ (z2 + (x2 + y2)*cosa) / d2*q.z;
+		}
+
+		mesh.verts[i].x = ans.x;
+		mesh.verts[i].y = ans.y;
+		mesh.verts[i].z = ans.z;
+	}
+
+	calculate_bbox(mesh);
+}
+
+void move_coord(TriangleMesh &mesh, float y);
+void move_coord(TriangleMesh &mesh, float y)
+{
+	for (int i = 0; i < mesh.verts.size(); i++)
+	{
+		mesh.verts[i].x += mesh.bounding_box[1].x;
+		mesh.verts[i].z += mesh.bounding_box[1].z;
+		mesh.verts[i].y += y;
+	}
+
+	calculate_bbox(mesh);
+}
 
 #endif  

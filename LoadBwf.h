@@ -7,13 +7,6 @@
 
 using namespace std;
 
-#define dot(u,v)   ((u).x * (v).x + (u).y * (v).y + (u).z*(v).z)    
-#define norm2(v)   dot(v,v)        // norm2 = squared length of vector    
-#define norm(v)    sqrt(norm2(v))  // norm = length of vector    
-#define d(u,v)     norm(u-v)       // distance = norm of difference   
-#define max(a,b)    (((a) > (b)) ? (a) : (b))
-#define min(a,b)    (((a) < (b)) ? (a) : (b))
-
 template <class Type>
 Type stringToNum(const string& str)
 {
