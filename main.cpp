@@ -22,11 +22,17 @@ typedef CGAL::AABB_tree<AABB_triangle_traits> Tree;
 typedef boost::optional<Tree::Intersection_and_primitive_id<Ray>::Type> Ray_intersection;
 
 float get_sym_plane(Tree &tree, TriangleMesh &mesh);
+void get_intersection(Tree &tree, Car2DCurveNet &curvenet_trans, Point *intersections);
+void output_curvenet_tmplt(Car2DCurveNet &curvenet_output, Point *intersections, float scale_factor, float *trans_factors);
+void output_curvenet_bwf(Car2DCurveNet &curvenet_output, float *bwf_trans_factors);
+
+std::string objfilename = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_model.obj";
+std::string bwffilename = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_S_class_render.TMPLT";
+std::string output_tmplt = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_S_class_render_output.TMPLT";
+std::string output_bwf = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_S_class_render_output.bwf";
 
 int main(int argc, char *argv[])
 {
-	std::string objfilename = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_model.obj";
-	std::string bwffilename = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Volkswagen_Phaeton_GP3.BWF";
 
 	TriangleMesh mesh;
 
@@ -37,10 +43,6 @@ int main(int argc, char *argv[])
 
 	//Rotate 180 degrees around the Z axis
 	rotate3(mesh, 0.0, 0.0, 1.0, 180);
-
-	Car2DCurveNet curvenet;
-
-	loadBwf(bwffilename, curvenet);
 
 	std::list<Triangle> triangles;
 	float tmp_x = 0.0;
@@ -79,7 +81,65 @@ int main(int argc, char *argv[])
 	float center_y = get_sym_plane(tree, mesh);
 	move_coord(mesh, center_y);
 
+	std::list<Triangle> triangles1;
+	for (int i = 0; i < mesh.faces.size(); i++)
+	{
+		v_idx = mesh.faces[i].v[0] - 1;
+		tmp_x = mesh.verts[v_idx].x;
+		tmp_y = mesh.verts[v_idx].y;
+		tmp_z = mesh.verts[v_idx].z;
+		v1 = Point(tmp_x, tmp_y, tmp_z);
 
+		v_idx = mesh.faces[i].v[1] - 1;
+		tmp_x = mesh.verts[v_idx].x;
+		tmp_y = mesh.verts[v_idx].y;
+		tmp_z = mesh.verts[v_idx].z;
+		v2 = Point(tmp_x, tmp_y, tmp_z);
+
+		v_idx = mesh.faces[i].v[2] - 1;
+		tmp_x = mesh.verts[v_idx].x;
+		tmp_y = mesh.verts[v_idx].y;
+		tmp_z = mesh.verts[v_idx].z;
+		v3 = Point(tmp_x, tmp_y, tmp_z);
+
+		triangles1.push_back(Triangle(v1, v2, v3));
+	}
+	Tree tree1(triangles1.begin(), triangles1.end());
+	std::cout << "---------- AABB tree updated -------------" << std::endl;
+
+	Car2DCurveNet curvenet;
+	loadBwf(bwffilename, curvenet);
+
+	Car2DCurveNet curvenet_trans = curvenet;
+	float trans_factors[2];
+	coord_trans_Bwf(curvenet_trans, trans_factors);
+
+	float obj_length = mesh.bounding_box[1].x - mesh.bounding_box[0].x;
+	float obj_height = mesh.bounding_box[1].z - mesh.bounding_box[0].z;
+
+	float tmplt_length = curvenet_trans.bounding_box[1].x - curvenet_trans.bounding_box[0].x;
+	float tmplt_height = curvenet_trans.bounding_box[1].y - curvenet_trans.bounding_box[0].y;
+
+	float scale_factor = obj_length / tmplt_length;
+	scaleBwf(curvenet_trans, scale_factor);
+
+
+	std::cout << "------------Calculating intersactions-----------" << std::endl;
+	Point intersections[12];
+	get_intersection(tree1, curvenet_trans, intersections);
+
+	for (int i = 0; i < 12; i++)
+	{
+		std::cout << intersections[i] << std::endl;
+	}
+
+	Car2DCurveNet curvenet_output = curvenet_trans;
+	output_curvenet_tmplt(curvenet_output, intersections, scale_factor, trans_factors);
+
+	//float bwf_trans_factors[2];
+	//output_curvenet_bwf(curvenet_output, bwf_trans_factors);
+
+	
 	return EXIT_SUCCESS;
 }
 
@@ -163,4 +223,129 @@ float get_sym_plane(Tree &tree,TriangleMesh &mesh)
 	float center_y = (center1_y + center2_y + center3_y) / 3;
 
 	return 0.0;
+}
+
+void get_intersection(Tree &tree, Car2DCurveNet &curvenet_trans, Point *intersections)
+{
+	Point ray_start[12];
+	Point ray_end[12];
+	ray_start[0] = Point(curvenet_trans.lines[42].points[0].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[42].points[0].y);
+	ray_start[1] = Point(curvenet_trans.lines[42].points[3].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[42].points[3].y);
+
+	ray_start[2] = Point(curvenet_trans.lines[44].points[0].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[44].points[0].y);
+	ray_start[3] = Point(curvenet_trans.lines[44].points[3].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[44].points[3].y);
+
+	ray_start[4] = Point(curvenet_trans.lines[50].points[0].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[50].points[0].y);
+	ray_start[5] = Point(curvenet_trans.lines[50].points[3].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[50].points[3].y);
+
+	ray_start[6] = Point(curvenet_trans.lines[94].points[0].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[94].points[0].y);
+	ray_start[7] = Point(curvenet_trans.lines[94].points[3].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[94].points[3].y);
+
+	ray_start[8] = Point(curvenet_trans.lines[95].points[0].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[95].points[0].y);
+	ray_start[9] = Point(curvenet_trans.lines[95].points[3].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[95].points[3].y);
+
+	ray_start[10] = Point(curvenet_trans.lines[96].points[0].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[96].points[0].y);
+	ray_start[11] = Point(curvenet_trans.lines[96].points[3].x, mesh.bounding_box[1].y + 10.0, curvenet_trans.lines[96].points[3].y);
+
+	Ray ray_query[12];
+
+	for (int i = 0; i < 12; i++)
+	{
+		ray_end[i] = Point(ray_start[i][0], 0, ray_start[i][2]);
+		ray_query[i] = Ray(ray_start[i], ray_end[i]);
+		std::cout << tree.number_of_intersected_primitives(ray_query[i])
+			<< " intersections(s) with ray query" << std::endl;
+
+		Ray_intersection intersection = tree.first_intersection(ray_query[i]);
+		Point* p = boost::get<Point>(&(intersection->first));
+		std::cout << *p << std::endl;
+		intersections[i] = *p;
+	}
+}
+
+void output_curvenet_tmplt(Car2DCurveNet &curvenet_output, Point *intersections, float scale_factor, float *trans_factors)
+{
+	curvenet_output.lines[42].points[0].z = intersections[0][1];
+	curvenet_output.lines[42].points[3].z = intersections[1][1];
+
+	curvenet_output.lines[44].points[0].z = intersections[2][1];
+	curvenet_output.lines[44].points[3].z = intersections[3][1];
+
+	curvenet_output.lines[50].points[0].z = intersections[4][1];
+	curvenet_output.lines[50].points[3].z = intersections[5][1];
+
+	curvenet_output.lines[94].points[0].z = intersections[6][1];
+	curvenet_output.lines[94].points[3].z = intersections[7][1];
+
+	curvenet_output.lines[95].points[0].z = intersections[8][1];
+	curvenet_output.lines[95].points[3].z = intersections[9][1];
+
+	curvenet_output.lines[96].points[0].z = intersections[10][1];
+	curvenet_output.lines[96].points[3].z = intersections[11][1];
+
+	scaleBwf(curvenet_output, 1.0 / scale_factor);
+
+	for (int i = 0; i < curvenet_output.lines.size(); i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			curvenet_output.lines[i].points[j].x += trans_factors[0];
+			curvenet_output.lines[i].points[j].y = trans_factors[1] - curvenet_output.lines[i].points[j].y;
+		}
+	}
+	bbox_section_curve(curvenet_output);
+
+	std::ofstream fout(output_tmplt);
+	for (int i = 0; i < curvenet_output.lines.size(); i++)
+	{
+		fout << "BEZIER  *" << setiosflags(ios::right) << setw(8)<< i + 1 << "           0" << setprecision(6) << std::fixed << setiosflags(ios::right) << setw(16) << curvenet_output.lines[i].points[0].x
+			<< setw(16) << curvenet_output.lines[i].points[0].y << setw(16) << curvenet_output.lines[i].points[0].z << " T" << i+1 << endl;
+
+		fout << "*T" << left << setw(2) << i + 1;
+		fout << setprecision(6) << right << setw(20) << curvenet_output.lines[i].points[1].x
+			<< setw(16) << curvenet_output.lines[i].points[1].y << setw(16) << curvenet_output.lines[i].points[1].z << endl;
+
+		fout << "*T" << left << setw(2) << i + 1;
+		fout << setprecision(6) << right << setw(20) << curvenet_output.lines[i].points[2].x
+			<< setw(16) << curvenet_output.lines[i].points[2].y << setw(16) << curvenet_output.lines[i].points[2].z << endl;
+		fout << "*T" << left << setw(2) << i + 1;
+		fout << setprecision(6) << right << setw(20) << curvenet_output.lines[i].points[3].x
+			<< setw(16) << curvenet_output.lines[i].points[3].y << setw(16) << curvenet_output.lines[i].points[3].z << endl;
+		//fout << "*T" << i+1 << "            " << setprecision(6) << curvenet_output.lines[i].points[2].x << "      " << curvenet_output.lines[i].points[2].y << "        " << curvenet_output.lines[i].points[2].z << endl;
+		//fout << "*T" << i+1 << "            " << setprecision(6) << curvenet_output.lines[i].points[3].x << "      " << curvenet_output.lines[i].points[3].y << "        " << curvenet_output.lines[i].points[3].z << endl;
+	}
+	
+}
+
+void output_curvenet_bwf(Car2DCurveNet &curvenet_output, float *bwf_trans_factors)
+{
+	std::ofstream fout(output_bwf);
+	float x[4], y[4], z[4];
+
+	for (int i = 0; i < curvenet_output.lines.size(); i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			x[j] = curvenet_output.lines[i].points[j].x;
+			y[j] = curvenet_output.lines[i].points[j].y;
+			z[j] = curvenet_output.lines[i].points[j].z;
+		}
+		
+		fout << "BEZIER  *" << setiosflags(ios::right) << setw(8) << i + 1 << "           0" << setprecision(6) << std::fixed << setiosflags(ios::right) << setw(16) << x[0] - bwf_trans_factors[0]
+			<< setw(16) << z[0] << setw(16) << bwf_trans_factors[1] - y[0] << " T" << i + 1 << endl;
+
+		fout << "*T" << left << setw(2) << i + 1;
+		fout << setprecision(6) << right << setw(20) << x[1] - bwf_trans_factors[0]
+			<< setw(16) << z[1] << setw(16) << bwf_trans_factors[1] - y[1] << endl;
+
+		fout << "*T" << left << setw(2) << i + 1;
+		fout << setprecision(6) << right << setw(20) << x[2] - bwf_trans_factors[0]
+			<< setw(16) << z[2] << setw(16) << bwf_trans_factors[1] - y[2] << endl;
+		fout << "*T" << left << setw(2) << i + 1;
+		fout << setprecision(6) << right << setw(20) << x[3] - bwf_trans_factors[0]
+			<< setw(16) << z[3] << setw(16) << bwf_trans_factors[1] - y[3] << endl;
+		//fout << "*T" << i+1 << "            " << setprecision(6) << curvenet_output.lines[i].points[2].x << "      " << curvenet_output.lines[i].points[2].y << "        " << curvenet_output.lines[i].points[2].z << endl;
+		//fout << "*T" << i+1 << "            " << setprecision(6) << curvenet_output.lines[i].points[3].x << "      " << curvenet_output.lines[i].points[3].y << "        " << curvenet_output.lines[i].points[3].z << endl;
+	}
+
 }
