@@ -24,12 +24,15 @@ typedef boost::optional<Tree::Intersection_and_primitive_id<Ray>::Type> Ray_inte
 float get_sym_plane(Tree &tree, TriangleMesh &mesh);
 void get_intersection(Tree &tree, Car2DCurveNet &curvenet_trans, Point *intersections);
 void output_curvenet_tmplt(Car2DCurveNet &curvenet_output, Point *intersections, float scale_factor, float *trans_factors);
-void output_curvenet_bwf(Car2DCurveNet &curvenet_output, float *bwf_trans_factors);
+void output_curvenet_bwf(Car2DCurveNet &curvenet_output);
 
-std::string objfilename = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_model.obj";
-std::string bwffilename = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_S_class_render.TMPLT";
-std::string output_tmplt = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_S_class_render_output.TMPLT";
-std::string output_bwf = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\Benz_S_class_render_output.bwf";
+std::string filepath = "D:\\visual studio 2013\\Projects\\CGAL_intersection\\CGAL_intersection\\";
+std::string filename = "Benz_S_class_render";
+
+std::string objfilename = filepath + filename + ".obj";
+std::string bwffilename = filepath + filename + ".TMPLT";
+std::string output_tmplt = filepath + filename + "_output1.TMPLT";
+std::string output_bwf = filepath + filename + "_output1.bwf";
 
 int main(int argc, char *argv[])
 {
@@ -136,8 +139,7 @@ int main(int argc, char *argv[])
 	Car2DCurveNet curvenet_output = curvenet_trans;
 	output_curvenet_tmplt(curvenet_output, intersections, scale_factor, trans_factors);
 
-	//float bwf_trans_factors[2];
-	//output_curvenet_bwf(curvenet_output, bwf_trans_factors);
+	output_curvenet_bwf(curvenet_output);
 
 	
 	return EXIT_SUCCESS;
@@ -283,6 +285,53 @@ void output_curvenet_tmplt(Car2DCurveNet &curvenet_output, Point *intersections,
 	curvenet_output.lines[96].points[0].z = intersections[10][1];
 	curvenet_output.lines[96].points[3].z = intersections[11][1];
 
+	curvenet_output.lines[43].points[0] = curvenet_output.lines[42].points[3];
+	curvenet_output.lines[43].points[3] = curvenet_output.lines[44].points[0];
+	curvenet_output.lines[45].points[0] = curvenet_output.lines[44].points[3];
+	curvenet_output.lines[45].points[3] = curvenet_output.lines[42].points[0];
+	curvenet_output.lines[46].points[0] = curvenet_output.lines[44].points[3];
+	curvenet_output.lines[46].points[3] = curvenet_output.lines[95].points[0];
+
+	curvenet_output.lines[47].points[0] = curvenet_output.lines[95].points[3];
+	curvenet_output.lines[47].points[3] = curvenet_output.lines[96].points[0];
+	curvenet_output.lines[48].points[0] = curvenet_output.lines[96].points[3];
+	curvenet_output.lines[48].points[3] = curvenet_output.lines[42].points[0];
+
+	curvenet_output.lines[49].points[0] = curvenet_output.lines[44].points[0];
+	curvenet_output.lines[49].points[3] = curvenet_output.lines[50].points[0];
+	curvenet_output.lines[51].points[0] = curvenet_output.lines[50].points[3];
+	curvenet_output.lines[51].points[3] = curvenet_output.lines[44].points[3];
+	curvenet_output.lines[52].points[0] = curvenet_output.lines[50].points[3];
+	curvenet_output.lines[52].points[3] = curvenet_output.lines[94].points[0];
+	curvenet_output.lines[53].points[0] = curvenet_output.lines[94].points[3];
+	curvenet_output.lines[53].points[3] = curvenet_output.lines[95].points[3];
+
+	curvenet_output.lines[54].points[0] = curvenet_output.lines[50].points[0];
+	curvenet_output.lines[56].points[3] = curvenet_output.lines[50].points[3];
+	curvenet_output.lines[57].points[3] = curvenet_output.lines[96].points[3];
+
+	curvenet_output.lines[58].points[0] = curvenet_output.lines[96].points[3];
+	curvenet_output.lines[58].points[3] = curvenet_output.lines[95].points[0];
+	curvenet_output.lines[59].points[0] = curvenet_output.lines[95].points[0];
+	curvenet_output.lines[59].points[3] = curvenet_output.lines[94].points[0];
+
+	curvenet_output.lines[60].points[0] = curvenet_output.lines[94].points[0];
+
+	float interpolation = 0.0;
+	for (int i = 42; i < 61; i++)
+	{
+		interpolation = (curvenet_output.lines[i].points[3].z - curvenet_output.lines[i].points[0].z) / 3;
+		curvenet_output.lines[i].points[1].z = curvenet_output.lines[i].points[0].z + interpolation;
+		curvenet_output.lines[i].points[2].z = curvenet_output.lines[i].points[1].z + interpolation;
+	}
+
+	for (int i = 94; i < 97; i++)
+	{
+		interpolation = (curvenet_output.lines[i].points[3].z - curvenet_output.lines[i].points[0].z) / 3;
+		curvenet_output.lines[i].points[1].z = curvenet_output.lines[i].points[0].z + interpolation;
+		curvenet_output.lines[i].points[2].z = curvenet_output.lines[i].points[1].z + interpolation;
+	}
+
 	scaleBwf(curvenet_output, 1.0 / scale_factor);
 
 	for (int i = 0; i < curvenet_output.lines.size(); i++)
@@ -317,33 +366,38 @@ void output_curvenet_tmplt(Car2DCurveNet &curvenet_output, Point *intersections,
 	
 }
 
-void output_curvenet_bwf(Car2DCurveNet &curvenet_output, float *bwf_trans_factors)
+void output_curvenet_bwf(Car2DCurveNet &curvenet_output)
 {
 	std::ofstream fout(output_bwf);
-	float x[4], y[4], z[4];
+
+	float center_front_wheel[2];
+	center_front_wheel[0] = (curvenet_output.lines[29].points[0].x + curvenet_output.lines[30].points[0].x + curvenet_output.lines[31].points[0].x + curvenet_output.lines[32].points[0].x) / 4.0;
+	center_front_wheel[1] = (curvenet_output.lines[29].points[0].y + curvenet_output.lines[30].points[0].y + curvenet_output.lines[31].points[0].y + curvenet_output.lines[32].points[0].y) / 4.0;
+
+	float bwf_x[4], bwf_y[4], bwf_z[4];
 
 	for (int i = 0; i < curvenet_output.lines.size(); i++)
 	{
 		for (int j = 0; j < 4; j++)
 		{
-			x[j] = curvenet_output.lines[i].points[j].x;
-			y[j] = curvenet_output.lines[i].points[j].y;
-			z[j] = curvenet_output.lines[i].points[j].z;
+			bwf_x[j] = curvenet_output.lines[i].points[j].x;
+			bwf_y[j] = curvenet_output.lines[i].points[j].z;
+			bwf_z[j] = curvenet_output.lines[i].points[j].y;
 		}
 		
-		fout << "BEZIER  *" << setiosflags(ios::right) << setw(8) << i + 1 << "           0" << setprecision(6) << std::fixed << setiosflags(ios::right) << setw(16) << x[0] - bwf_trans_factors[0]
-			<< setw(16) << z[0] << setw(16) << bwf_trans_factors[1] - y[0] << " T" << i + 1 << endl;
+		fout << "BEZIER  *" << setiosflags(ios::right) << setw(8) << i + 1 << "           0" << setprecision(6) << std::fixed << setiosflags(ios::right) << setw(16) << bwf_x[0] - center_front_wheel[0]
+			<< setw(16) << bwf_y[0] << setw(16) << center_front_wheel[1] - bwf_z[0] << " T" << i + 1 << endl;
 
 		fout << "*T" << left << setw(2) << i + 1;
-		fout << setprecision(6) << right << setw(20) << x[1] - bwf_trans_factors[0]
-			<< setw(16) << z[1] << setw(16) << bwf_trans_factors[1] - y[1] << endl;
+		fout << setprecision(6) << right << setw(20) << bwf_x[1] - center_front_wheel[0]
+			<< setw(16) << bwf_y[1] << setw(16) << center_front_wheel[1] - bwf_z[1] << endl;
 
 		fout << "*T" << left << setw(2) << i + 1;
-		fout << setprecision(6) << right << setw(20) << x[2] - bwf_trans_factors[0]
-			<< setw(16) << z[2] << setw(16) << bwf_trans_factors[1] - y[2] << endl;
+		fout << setprecision(6) << right << setw(20) << bwf_x[2] - center_front_wheel[0]
+			<< setw(16) << bwf_y[2] << setw(16) << center_front_wheel[1] - bwf_z[2] << endl;
 		fout << "*T" << left << setw(2) << i + 1;
-		fout << setprecision(6) << right << setw(20) << x[3] - bwf_trans_factors[0]
-			<< setw(16) << z[3] << setw(16) << bwf_trans_factors[1] - y[3] << endl;
+		fout << setprecision(6) << right << setw(20) << bwf_x[3] - center_front_wheel[0]
+			<< setw(16) << bwf_y[3] << setw(16) << center_front_wheel[1] - bwf_z[3] << endl;
 		//fout << "*T" << i+1 << "            " << setprecision(6) << curvenet_output.lines[i].points[2].x << "      " << curvenet_output.lines[i].points[2].y << "        " << curvenet_output.lines[i].points[2].z << endl;
 		//fout << "*T" << i+1 << "            " << setprecision(6) << curvenet_output.lines[i].points[3].x << "      " << curvenet_output.lines[i].points[3].y << "        " << curvenet_output.lines[i].points[3].z << endl;
 	}
